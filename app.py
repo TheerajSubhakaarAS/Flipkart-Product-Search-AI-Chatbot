@@ -32,11 +32,13 @@ def agglomerative_clustering(tfidf_matrix, num_clusters):
     labels = agglo.fit_predict(tfidf_matrix.toarray())  # Requires dense input
     return labels
 
+
 # Function for DBSCAN Clustering
 def dbscan_clustering(tfidf_matrix, eps_value, min_samples_value):
     dbscan = DBSCAN(eps=eps_value, min_samples=min_samples_value)
     labels = dbscan.fit_predict(tfidf_matrix.toarray())  # Requires dense input
     return labels
+
 # Function to get top N products based on cosine similarity
 def get_top_products(tfidf_matrix, vectorizer, query, data, top_n=10):
     input_tfidf = vectorizer.transform([query])
@@ -57,10 +59,6 @@ def get_top_products(tfidf_matrix, vectorizer, query, data, top_n=10):
         st.write(f"**Similarity Score:** {similarities[idx]:.4f}")
         st.write("------")
 
-# Upload CSV file (you can hardcode this in your production version)
-csv_path = "Flipkart.csv"  # Replace with the actual path
-data = pd.read_csv(csv_path)
-
 # Function for plotting clustering results with t-SNE
 def plot_clusters(tfidf_matrix, labels):
     plt.figure(figsize=(10, 7))
@@ -73,51 +71,44 @@ def plot_clusters(tfidf_matrix, labels):
     plt.xlabel('t-SNE Feature 1')
     plt.ylabel('t-SNE Feature 2')
     st.pyplot(plt)
+
 # Function for Boolean retrieval with AND/OR logic
 def boolean_retrieval(data, query):
     if ' AND ' in query:
         terms = query.split(' AND ')
         boolean_results = [
             entry for entry in data.to_dict('records') 
-            if all(term.lower() in entry['title'].lower() or term.lower() in entry['description'].lower() 
-                for term in terms if pd.notna(entry['title']) and pd.notna(entry['description']))
-            ]
+            if all(term.lower() in entry['product_name'].lower() or term.lower() in entry['description'].lower() 
+                for term in terms if pd.notna(entry['product_name']) and pd.notna(entry['description']))
+        ]
     elif ' OR ' in query:
         terms = query.split(' OR ')
         boolean_results = [
             entry for entry in data.to_dict('records') 
-            if any(term.lower() in entry['title'].lower() or term.lower() in entry['description'].lower() 
-                for term in terms if pd.notna(entry['title']) and pd.notna(entry['description']))
-            ]
+            if any(term.lower() in entry['product_name'].lower() or term.lower() in entry['description'].lower() 
+                for term in terms if pd.notna(entry['product_name']) and pd.notna(entry['description']))
+        ]
     else:
-        # If no Boolean operator is provided, default to an OR search
         boolean_results = [
             entry for entry in data.to_dict('records')
-            if query.lower() in entry['title'].lower() or query.lower() in entry['description'].lower()
-            ]
+            if query.lower() in entry['product_name'].lower() or query.lower() in entry['description'].lower()
+        ]
     return boolean_results
-
 
 # Initialize session state for conversation history
 if 'conversation' not in st.session_state:
     st.session_state['conversation'] = []
 
 # Function for AI Chatbot
-def ai_chatbot(user_input, data, tfidf_matrix, vectorizer):
+def ai_chatbot(user_input):
     character_description = """You are a sporty and practical expert in women's athletic and casual clothing, especially focused on comfort and functionality, like cycling shorts. You’re approachable and have a keen eye for fashion that prioritizes comfort and versatility. You break down the features of products with ease, offering clear and detailed advice on fabric types, patterns, and care instructions. You enjoy helping others make smart choices by highlighting essential details, such as fabric blends like "Cotton Lycra," practical washing tips, and the benefits of versatile styles like solid-colored shorts that come in convenient packs of three."""
     
-    # Combine the character description with the user's input
     full_input = f"{character_description}\nUser: {user_input}\nAssistant:"
 
     client = Groq(api_key="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")
     completion = client.chat.completions.create(
         model="llama-3.1-8b-instant",
-        messages=[
-            {
-                "role": "user",
-                "content": full_input
-            }
-        ],
+        messages=[{"role": "user", "content": full_input}],
         temperature=1,
         max_tokens=1024,
         top_p=1,
@@ -131,35 +122,6 @@ def ai_chatbot(user_input, data, tfidf_matrix, vectorizer):
 
     return response
 
-
-   # If no specific URL request is detected, proceed with regular AI completion
-def ai_chatbot(user_input, data, tfidf_matrix, vectorizer):
-    character_description = """You are a sporty and practical expert in women's athletic and casual clothing, especially focused on comfort and functionality, like cycling shorts. You’re approachable and have a keen eye for fashion that prioritizes comfort and versatility. You break down the features of products with ease, offering clear and detailed advice on fabric types, patterns, and care instructions. You enjoy helping others make smart choices by highlighting essential details, such as fabric blends like "Cotton Lycra," practical washing tips, and the benefits of versatile styles like solid-colored shorts that come in convenient packs of three."""
-    
-    # Combine the character description with the user's input
-    full_input = f"{character_description}\nUser: {user_input}\nAssistant:"
-
-    client = Groq(api_key="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")
-    completion = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        messages=[
-            {
-                "role": "user",
-                "content": full_input
-            }
-        ],
-        temperature=1,
-        max_tokens=1024,
-        top_p=1,
-        stream=True,
-        stop=None,
-    )
-
-    response = ""
-    for chunk in completion:
-        response += chunk.choices[0].delta.content or ""
-
-    return response
 # Streamlit App
 st.title("Product Search on Flipkart and Chatbot App")
 
@@ -168,6 +130,9 @@ with st.sidebar:
                        ["Home", "Boolean Retrieval", "Clustering Analysis", "Product Similarity", "Ai Chatbot"],
                        icons=['house', 'bar-chart', 'graph-up-arrow', 'info-circle', 'file-text', 'link'],
                        menu_icon="cast", default_index=0)
+
+# Initialize a variable for uploaded data
+data = None
 
 # Home Page
 if page == "Home":
@@ -209,14 +174,14 @@ elif page == "Boolean Retrieval":
         data_boolean = pd.read_csv(uploaded_file_boolean)
         
         # Check for required columns
-        if 'title' not in data_boolean.columns or 'description' not in data_boolean.columns:
-            st.error("CSV file must contain 'title' and 'description' columns.")
+        if 'product_name' not in data_boolean.columns or 'description' not in data_boolean.columns:
+            st.error("CSV file must contain 'product_name' and 'description' columns.")
         else:
             st.write("### Data Preview:")
             st.dataframe(data_boolean.head())
 
             # Ensure 'title' and 'description' columns are strings
-            data_boolean['title'] = data_boolean['title'].astype(str)
+            data_boolean['product_name'] = data_boolean['product_name'].astype(str)
             data_boolean['description'] = data_boolean['description'].astype(str)
 
             query = st.text_area("Enter product description to find related products:")
@@ -228,14 +193,10 @@ elif page == "Boolean Retrieval":
                     st.write("### Search Results:")
                     for result in boolean_results:
                         st.image(result['image_links'], width=100)
-                        st.write(f"**Title:** {result['title']}")
+                        st.write(f"**Title:** {result['product_name']}")
                         st.write(f"**Description:** {result['description']}")
-                        st.write(f"**Rating:** {result['product_rating']} | **Price:** {result['selling_price']} | **MRP:** {result['mrp']}")
+                        st.write(f"**Rating:** {result.get('product_rating', 'N/A')} | **Price:** {result.get('selling_price', 'N/A')} | **MRP:** {result.get('mrp', 'N/A')}")
                         st.write("------")
-
-                    # Download option for results
-                    csv = pd.DataFrame(boolean_results).to_csv(index=False)
-                    st.download_button(label="Download Results as CSV", data=csv, file_name='boolean_search_results.csv', mime='text/csv')
                 else:
                     st.write("No products found.")
 
@@ -261,28 +222,25 @@ elif page == "Clustering Analysis":
             # Take only the first 1000 rows for clustering
             data_clustering = data_clustering.iloc[:1000]
 
+            # Create TF-IDF matrix
             tfidf_matrix, vectorizer = create_tfidf_matrix(data_clustering)
-            
-            # Sidebar: Choose clustering method
-            clustering_method = st.sidebar.selectbox(
-                "Choose Clustering Method:",
-                ["K-Means", "Agglomerative Clustering", "DBSCAN"]
-            )
 
-            if clustering_method == "K-Means":
-                num_clusters = st.number_input("Select number of clusters for K-Means:", min_value=1, max_value=10, value=2)
-                if st.button("Run K-Means Clustering"):
-                    kmeans_labels, cluster_centers = kmeans_clustering(tfidf_matrix, num_clusters)
-                    st.write("K-Means Clustering Labels:")
-                    st.write(kmeans_labels)
-                    plot_clusters(tfidf_matrix, kmeans_labels)
+            # Clustering options
+            st.write("### Choose Clustering Algorithm:")
+            clustering_algorithm = st.selectbox("Select an algorithm:", ["K-Means", "Agglomerative", "DBSCAN"])
 
-            elif clustering_method == "Agglomerative Clustering":
+            if clustering_algorithm == "K-Means":
+                num_clusters = st.number_input("Number of clusters:", min_value=2, max_value=10, value=3)
+                if st.button("Run Clustering"):
+                    labels, _ = kmeans_clustering(tfidf_matrix, num_clusters)
+                    plot_clusters(tfidf_matrix, labels)
+
+            elif clustering_algorithm == "Agglomerative":
                 num_clusters = st.number_input("Select number of clusters for Agglomerative Clustering:", min_value=1, max_value=10, value=2)
                 if st.button("Run Agglomerative Clustering"):
                     agglo_labels = agglomerative_clustering(tfidf_matrix, num_clusters)
                     st.write("Agglomerative Clustering Labels:")
-                    st.write(agglo_labels)
+                    # st.write(agglo_labels)
                     
                     # Create and plot the dendrogram
                     plt.figure(figsize=(10, 7))
@@ -293,20 +251,18 @@ elif page == "Clustering Analysis":
                     plt.ylabel('Distance')
                     st.pyplot(plt)
 
-            elif clustering_method == "DBSCAN":
-                eps_value = st.number_input("Select epsilon (eps) for DBSCAN:", min_value=0.1, max_value=10.0, value=0.5)
-                min_samples_value = st.number_input("Select min_samples for DBSCAN:", min_value=1, max_value=10, value=5)
-                if st.button("Run DBSCAN Clustering"):
-                    dbscan_labels = dbscan_clustering(tfidf_matrix, eps_value, min_samples_value)
-                    st.write("DBSCAN Clustering Labels:")
-                    st.write(dbscan_labels)
-                    plot_clusters(tfidf_matrix, dbscan_labels)
+            elif clustering_algorithm == "DBSCAN":
+                eps_value = st.number_input("Epsilon:", min_value=0.1, value=0.5)
+                min_samples_value = st.number_input("Min Samples:", min_value=1, value=5)
+                if st.button("Run Clustering"):
+                    labels = dbscan_clustering(tfidf_matrix, eps_value, min_samples_value)
+                    plot_clusters(tfidf_matrix, labels)
 
 # Product Similarity Section
 elif page == "Product Similarity":
     st.write("### Step 3: Product Based on Description Using HITS Algorithm")
 
-    # Upload CSV file for Link Analysis
+    # Upload CSV file for Product Similarity
     uploaded_file = st.file_uploader("Upload your CSV file for Product Similarity", type="csv")
 
     if uploaded_file is not None:
@@ -319,36 +275,23 @@ elif page == "Product Similarity":
             st.write("### Data Preview:")
             st.dataframe(data.head())
 
-            # Ensure 'product_name' and 'description' columns are strings
+            # Ensure 'product_name', 'description' are strings
             data['product_name'] = data['product_name'].astype(str)
             data['description'] = data['description'].astype(str)
 
-            # Input description to find matching products
-            description_input = st.text_area("Enter a product description:")
+            # Create TF-IDF matrix
+            tfidf_matrix, vectorizer = create_tfidf_matrix(data)
+
+            query = st.text_area("Enter product description to find similar products:")
 
             if st.button("Find Similar Products"):
-                # Create TF-IDF matrix based on 'description' feature
-                tfidf_matrix, vectorizer = create_tfidf_matrix(data)
-
-                # Get and display the top 10 products based on similarity
-                get_top_products(tfidf_matrix, vectorizer, description_input, data)
+                get_top_products(tfidf_matrix, vectorizer, query, data)
 
 # AI Chatbot Section
 elif page == "Ai Chatbot":
     st.write("### AI Chatbot")
 
-    # Initialize chat history
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-    
-    if 'product_name' not in data.columns or 'description' not in data.columns or 'product_url' not in data.columns:
-        st.error("CSV file must contain 'product_name', 'description', and 'product_url' columns.")
-    else:
-        # Create TF-IDF matrix for the data
-        tfidf_matrix, vectorizer = create_tfidf_matrix(data)
-
-    # Display chat messages from history on app rerun
-    for message in st.session_state.messages:
+    for message in st.session_state['conversation']:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
@@ -359,16 +302,15 @@ elif page == "Ai Chatbot":
             st.markdown(prompt)
 
         # Add user message to chat history
-        st.session_state.messages.append({"role": "user", "content": prompt})
+        st.session_state['conversation'].append({"role": "user", "content": prompt})
 
         # Generate bot response using the AI chatbot function
         with st.spinner("Generating response..."):
-            response = ai_chatbot(prompt, data, tfidf_matrix, vectorizer)
+            response = ai_chatbot(prompt)
 
         # Display assistant response in chat message container
         with st.chat_message("assistant"):
             st.markdown(response)
 
         # Add assistant response to chat history
-        st.session_state.messages.append({"role": "assistant", "content": response})
-        
+        st.session_state['conversation'].append({"role": "assistant", "content": response})
