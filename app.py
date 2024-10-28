@@ -53,12 +53,12 @@ def get_top_products(tfidf_matrix, vectorizer, query, data, top_n=10):
     st.write(f"### Top {top_n} Products based on Similarity Score:")
     for idx in top_indices:
         product = data.iloc[idx]
-        st.write(f"**Product Name:** {product['product_name']}")
-        st.write(f"**Description:** {product['description']}")
-        st.write(f"**Product Link:** {product['product_url']}")
-        st.write(f"**OG PRICE:** {product['retail_price']}")
-        st.write(f"**Discount Price:** {product['discounted_price']}")
-        st.write(f"**Similarity Score:** {similarities[idx]:.4f}")
+        st.write(f"*Product Name:* {product['product_name']}")
+        st.write(f"*Description:* {product['description']}")
+        st.write(f"*Product Link:* {product['product_url']}")
+        st.write(f"*OG PRICE:* {product['retail_price']}")
+        st.write(f"*Discount Price:* {product['discounted_price']}")
+        st.write(f"*Similarity Score:* {similarities[idx]:.4f}")
         st.write("------")
 
 # Function for plotting clustering results with t-SNE
@@ -147,10 +147,10 @@ if page == "Home":
 
     st.write("### Key Features:")
     st.write("""
-    - **Boolean Retrieval**: Search for products using Boolean queries to find related items.
-    - **Clustering Analysis**: Explore clustering techniques (K-Means, Agglomerative, DBSCAN) to understand product groupings.
-    - **Product Similarity**: Find similar products based on descriptions using cosine similarity.
-    - **AI Chatbot**: Interact with an AI chatbot to get product recommendations and answers to your queries.
+    - *Boolean Retrieval*: Search for products using Boolean queries to find related items.
+    - *Clustering Analysis*: Explore clustering techniques (K-Means, Agglomerative, DBSCAN) to understand product groupings.
+    - *Product Similarity*: Find similar products based on descriptions using cosine similarity.
+    - *AI Chatbot*: Interact with an AI chatbot to get product recommendations and answers to your queries.
     """)
 
     st.write("### Technologies Used:")
@@ -195,9 +195,9 @@ elif page == "Boolean Retrieval":
                     st.write("### Search Results:")
                     for result in boolean_results:
                         st.image(result['image_links'], width=100)
-                        st.write(f"**Title:** {result['product_name']}")
-                        st.write(f"**Description:** {result['description']}")
-                        st.write(f"**Rating:** {result.get('product_rating', 'N/A')} | **Price:** {result.get('selling_price', 'N/A')} | **MRP:** {result.get('mrp', 'N/A')}")
+                        st.write(f"*Title:* {result['product_name']}")
+                        st.write(f"*Description:* {result['description']}")
+                        st.write(f"*Rating:* {result.get('product_rating', 'N/A')} | *Price:* {result.get('selling_price', 'N/A')} | *MRP:* {result.get('mrp', 'N/A')}")
                         st.write("------")
                 else:
                     st.write("No products found.")
@@ -236,6 +236,11 @@ elif page == "Clustering Analysis":
                 if st.button("Run Clustering"):
                     labels, _ = kmeans_clustering(tfidf_matrix, num_clusters)
                     plot_clusters(tfidf_matrix, labels)
+    
+                        # Calculate and display evaluation metrics
+                    silhouette_avg = silhouette_score(tfidf_matrix, labels)
+                    davies_bouldin = davies_bouldin_score(tfidf_matrix.toarray(), labels)
+
                     
                     st.write("### Clustering Evaluation Metrics")
                     st.metric("Silhouette Score", f"{silhouette_avg:.4f}")
