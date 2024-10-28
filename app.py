@@ -9,6 +9,8 @@ import numpy as np
 from streamlit_option_menu import option_menu
 from scipy.cluster.hierarchy import dendrogram, linkage
 from groq import Groq
+from sklearn.metrics import silhouette_score, davies_bouldin_score
+
 
 # Function to create TF-IDF matrix
 def create_tfidf_matrix(data):
@@ -234,7 +236,14 @@ elif page == "Clustering Analysis":
                 if st.button("Run Clustering"):
                     labels, _ = kmeans_clustering(tfidf_matrix, num_clusters)
                     plot_clusters(tfidf_matrix, labels)
-
+    
+                # Calculate and display evaluation metrics
+            silhouette_avg = silhouette_score(tfidf_matrix, labels)
+            davies_bouldin = davies_bouldin_score(tfidf_matrix, labels)
+            
+            st.write("### Clustering Evaluation Metrics")
+            st.metric("Silhouette Score", f"{silhouette_avg:.4f}")
+            st.metric("Davies-Bouldin Index", f"{davies_bouldin:.4f}")
             elif clustering_algorithm == "Agglomerative":
                 num_clusters = st.number_input("Select number of clusters for Agglomerative Clustering:", min_value=1, max_value=10, value=2)
                 if st.button("Run Agglomerative Clustering"):
