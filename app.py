@@ -237,13 +237,14 @@ elif page == "Clustering Analysis":
                     labels, _ = kmeans_clustering(tfidf_matrix, num_clusters)
                     plot_clusters(tfidf_matrix, labels)
     
-                # Calculate and display evaluation metrics
-            silhouette_avg = silhouette_score(tfidf_matrix, labels)
-            davies_bouldin = davies_bouldin_score(tfidf_matrix, labels)
+                        # Calculate and display evaluation metrics
+                    silhouette_avg = silhouette_score(tfidf_matrix, labels)
+                    davies_bouldin = davies_bouldin_score(tfidf_matrix, labels)
+                    
+                    st.write("### Clustering Evaluation Metrics")
+                    st.metric("Silhouette Score", f"{silhouette_avg:.4f}")
+                    st.metric("Davies-Bouldin Index", f"{davies_bouldin:.4f}")
             
-            st.write("### Clustering Evaluation Metrics")
-            st.metric("Silhouette Score", f"{silhouette_avg:.4f}")
-            st.metric("Davies-Bouldin Index", f"{davies_bouldin:.4f}")
             elif clustering_algorithm == "Agglomerative":
                 num_clusters = st.number_input("Select number of clusters for Agglomerative Clustering:", min_value=1, max_value=10, value=2)
                 if st.button("Run Agglomerative Clustering"):
