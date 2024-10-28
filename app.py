@@ -236,12 +236,6 @@ elif page == "Clustering Analysis":
                 if st.button("Run Clustering"):
                     labels, _ = kmeans_clustering(tfidf_matrix, num_clusters)
                     plot_clusters(tfidf_matrix, labels)
-    
-                        # Calculate and display evaluation metrics
-                    silhouette_avg = silhouette_score(tfidf_matrix, labels)
-                    davies_bouldin = davies_bouldin_score(tfidf_matrix.toarray(), labels)
-
-
                     
                     st.write("### Clustering Evaluation Metrics")
                     st.metric("Silhouette Score", f"{silhouette_avg:.4f}")
